@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>북로그 — 가족 독서기록노트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<style>
+  :root{
+    --bg:#FBF8F2;
+    --card:#FFFFFF;
+    --ink:#3B332B;
+    --ink-soft:#A79A87;
+    --line:#EFE6D8;
+
+    --dad:#6E9BFF;    --dad-tint:#EAF0FF;
+    --mom:#FF7FA6;    --mom-tint:#FFE9F0;
+    --girl1:#FFA23C;  --girl1-tint:#FFEEDA;
+    --girl2:#B08CFF;  --girl2-tint:#F3EDFF;
+
+    --stamp:#C1483A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(rgba(59,51,43,0.06) 1px, transparent 1.4px) 0 0/16px 16px,
+      var(--bg);
+    color:var(--ink);
+    font-family:'Pretendard',-apple-system,sans-serif;
+    min-height:100vh;
+    padding:24px 16px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .setup-banner{
+    max-width:900px;margin:0 auto 16px;
+    background:#FFF4E0;border:1.5px dashed #D9A63E;border-radius:14px;
+    padding:14px 16px;font-size:13px;line-height:1.6;color:#6B4E12;
+    display:none;
+  }
+  .setup-banner.show{display:block;}
+  .setup-banner code{background:#00000010;padding:1px 6px;border-radius:5px;}
+
+  .app{
+    max-width:900px;margin:0 auto;
+    display:flex;
+    background:var(--card);
+    border-radius:26px;
+    overflow:hidden;
+    box-shadow:0 14px 34px -20px rgba(59,51,43,0.35);
+  }
+
+  /* ===== sidebar: diary index tabs ===== */
+  .sidebar{
+    width:196px;flex-shrink:0;
+    background:var(--bg);
+    border-right:1px dashed var(--line);
+    display:flex;flex-direction:column;
+    padding:20px 12px;
+  }
+  .nameplate{padding:2px 6px 18px;}
+  .np-title{display:block;font-family:'Gaegu',sans-serif;font-weight:700;font-size:26px;color:var(--ink);line-height:1;}
+  .np-sub{display:block;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;}
+  .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#9BD6A8;margin-right:5px;}
+  .sync-dot.busy{background:#E8C36A;}
+
+  .shelf-list{display:flex;flex-direction:column;gap:6px;flex:1;}
+  .shelf-slot{
+    all:unset;
+    display:flex;align-items:center;gap:9px;
+    box-sizing:border-box;
+    cursor:pointer;
+    padding:11px 14px;
+    border-radius:12px;
+    font-size:13.5px;font-weight:700;color:var(--ink-soft);
+    transition:.15s ease;
+  }
+  .shelf-slot .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--line);}
+  .shelf-slot:hover{background:var(--card);}
+  .shelf-slot.active{color:var(--ink);}
+  .shelf-slot.active .dot{background:var(--ink);}
+  .shelf-slot[data-m="박형민"].active{background:var(--dad-tint);}
+  .shelf-slot[data-m="박형민"].active .dot{background:var(--dad);}
+  .shelf-slot[data-m="이희연"].active{background:var(--mom-tint);}
+  .shelf-slot[data-m="이희연"].active .dot{background:var(--mom);}
+  .shelf-slot[data-m="박한별"].active{background:var(--girl1-tint);}
+  .shelf-slot[data-m="박한별"].active .dot{background:var(--girl1);}
+  .shelf-slot[data-m="박한솔"].active{background:var(--girl2-tint);}
+  .shelf-slot[data-m="박한솔"].active .dot{background:var(--girl2);}
+  .shelf-slot[data-m="전체"].active{background:#EFEAE0;}
+
+  .shelf-gap{border-top:1px dashed var(--line);margin:8px 4px;}
+
+  .shelf-slot-gold.active{background:#FCEFD9;}
+  .shelf-slot-gold.active .dot{background:var(--girl1);}
+
+  /* ===== main panel ===== */
+  .main{flex:1;min-width:0;padding:26px 28px 32px;}
+  .main-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
+  .main-head h2{font-family:'Gaegu',sans-serif;font-size:26px;font-weight:700;margin:0;}
+  .stats-line{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:2px 0 16px;}
+
+  .btn-add{
+    background:var(--ink);color:#fff;border:none;border-radius:999px;
+    padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;
+    font-family:'Pretendard',sans-serif;transition:.15s ease;
+  }
+  .btn-add:hover{transform:translateY(-1px);}
+
+  /* form */
+  .form-card{
+    background:var(--bg);border:1px dashed var(--line);border-radius:18px;
+    padding:18px 18px 16px;margin-bottom:18px;display:none;
+  }
+  .form-card.open{display:block;}
+  .form-title{font-family:'Gaegu',sans-serif;font-size:19px;font-weight:700;margin:0 0 14px;}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .field.full{grid-column:1/-1;}
+  label{font-size:11.5px;color:var(--ink-soft);font-weight:700;}
+  input,select,textarea{
+    font-family:'Pretendard',sans-serif;border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;font-size:13.5px;color:var(--ink);
+    background:var(--card);outline:none;transition:border-color .15s ease;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--ink);}
+  textarea{resize:vertical;min-height:82px;line-height:1.6;}
+  .range-row{display:flex;align-items:center;gap:6px;}
+  .range-row span{color:var(--ink-soft);font-size:12px;}
+
+  .status-toggle{display:flex;gap:8px;}
+  .status-btn{
+    flex:1;border:1.5px solid var(--line);background:var(--card);
+    border-radius:10px;padding:10px 10px;font-size:13px;font-weight:700;
+    color:var(--ink-soft);cursor:pointer;text-align:center;
+  }
+  .status-btn.active{color:#fff;border-color:transparent;}
+  .status-btn.active[data-s="reading"]{background:#B08CFF;}
+  .status-btn.active[data-s="done"]{background:var(--stamp);}
+
+  .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+    border-radius:999px;padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-save{background:var(--ink);color:#fff;border:none;border-radius:999px;
+    padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;}
+
+  /* entries */
+  .entry{
+    position:relative;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;padding:15px 17px;margin-bottom:10px;
+  }
+  .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .entry-title{font-size:15.5px;font-weight:800;margin:0;line-height:1.4;}
+  .badge-row{display:flex;gap:8px;flex-shrink:0;align-items:center;}
+  .badge{font-size:10.5px;font-weight:800;color:#fff;padding:4px 10px;border-radius:999px;white-space:nowrap;}
+  .badge[data-m="박형민"]{background:var(--dad);}
+  .badge[data-m="이희연"]{background:var(--mom);}
+  .badge[data-m="박한별"]{background:var(--girl1);}
+  .badge[data-m="박한솔"]{background:var(--girl2);}
+
+  .stamp{
+    font-family:'Gaegu',sans-serif;font-weight:700;font-size:11.5px;
+    color:var(--stamp);border:2px solid var(--stamp);border-radius:999px;
+    padding:3px 10px;transform:rotate(-6deg);white-space:nowrap;
+    opacity:0.9;
+  }
+  .status-reading{font-size:10.5px;font-weight:700;color:#8A6FD9;background:#F3EDFF;
+    padding:4px 10px;border-radius:999px;white-space:nowrap;}
+
+  .entry-meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 9px;}
+  .meta-pill{font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--bg);
+    border-radius:999px;padding:4px 10px;}
+  .entry-content{font-size:13.5px;line-height:1.7;color:#4A4038;white-space:pre-wrap;}
+  .entry-del{position:absolute;top:14px;right:15px;background:none;border:none;cursor:pointer;
+    font-size:10.5px;color:var(--ink-soft);font-weight:700;opacity:0;transition:opacity .15s ease;
+    padding:4px 8px;border-radius:6px;}
+  .entry:hover .entry-del{opacity:1;}
+  .entry-del.confirm{color:#E23F6B;opacity:1;background:#FDE7ED;}
+
+  .empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:44px 20px;
+    border:1.5px dashed var(--line);border-radius:16px;}
+  .empty b{display:block;font-family:'Gaegu',sans-serif;font-size:19px;color:var(--ink);margin-bottom:6px;font-weight:700;}
+
+  /* wrap view */
+  .year-switch{display:flex;align-items:center;gap:12px;margin-bottom:16px;}
+  .year-switch button{background:var(--bg);border:1px solid var(--line);border-radius:50%;
+    width:30px;height:30px;cursor:pointer;font-size:14px;font-weight:800;color:var(--ink);}
+  .year-switch .y{font-family:'Gaegu',sans-serif;font-size:22px;font-weight:700;}
+
+  .stat-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;}
+  .tile{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 10px;}
+  .tile .num{font-size:21px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);}
+  .tile .lab{font-size:10.5px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
+
+  .member-block{background:var(--bg);border:1px solid var(--line);border-radius:16px;
+    padding:14px 16px;margin-bottom:10px;}
+  .mb-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+  .mb-name{font-size:13.5px;font-weight:800;}
+  .mb-count{font-size:12px;font-weight:700;color:var(--ink-soft);}
+  .bar-track{background:var(--card);border:1px solid var(--line);border-radius:999px;height:9px;overflow:hidden;margin-bottom:11px;}
+  .bar-fill{height:100%;border-radius:999px;transition:width .4s ease;}
+  .bar-fill[data-m="박형민"]{background:var(--dad);}
+  .bar-fill[data-m="이희연"]{background:var(--mom);}
+  .bar-fill[data-m="박한별"]{background:var(--girl1);}
+  .bar-fill[data-m="박한솔"]{background:var(--girl2);}
+  .chip-group{margin-bottom:6px;}
+  .chip-group .cg-lab{font-size:10.5px;font-weight:800;color:var(--ink-soft);margin-bottom:5px;}
+  .title-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .title-chip{font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:999px;}
+  .title-chip.done[data-m="박형민"]{background:var(--dad);color:#fff;}
+  .title-chip.done[data-m="이희연"]{background:var(--mom);color:#fff;}
+  .title-chip.done[data-m="박한별"]{background:var(--girl1);color:#fff;}
+  .title-chip.done[data-m="박한솔"]{background:var(--girl2);color:#fff;}
+  .title-chip.reading{background:var(--card);border:1px dashed var(--line);color:var(--ink-soft);}
+  .mb-empty{font-size:12px;color:var(--ink-soft);}
+
+  .foot{text-align:center;color:var(--ink-soft);font-size:14px;margin-top:22px;font-family:'Gaegu',sans-serif;}
+
+  @media (max-width:720px){
+    .app{flex-direction:column;border-radius:20px;}
+    .sidebar{
+      width:100%;border-right:none;border-bottom:1px dashed var(--line);
+      flex-direction:row;align-items:center;padding:14px 12px;gap:10px;
+    }
+    .nameplate{padding:0;}
+    .np-title{font-size:22px;}
+    .np-sub{display:none;}
+    .shelf-list{flex-direction:row;overflow-x:auto;gap:6px;}
+    .shelf-slot{white-space:nowrap;}
+    .shelf-gap{display:none;}
+    .main{padding:20px 18px 26px;}
+    .grid{grid-template-columns:1fr;}
+    .stat-tiles{grid-template-columns:1fr 1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="setup-banner" id="setup-banner">
+  ⚠️ <b>설정이 필요해요.</b> 아직 Google 스프레드시트(Apps Script)에 연결되지 않았어요. 코드 상단의 <code>APPS_SCRIPT_URL</code> 값을 본인의 웹 앱 URL로 바꿔주세요. 그 전까지는 기록이 저장되지 않아요.
+</div>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="nameplate">
+      <span class="np-title">북로그</span>
+      <span class="np-sub"><span class="sync-dot" id="sync-dot"></span>Family Book Diary</span>
+    </div>
+    <nav class="shelf-list" id="shelf-list">
+      <button class="shelf-slot active" data-mode="log" data-m="전체"><span class="dot"></span>전체 기록</button>
+      <button class="shelf-slot" data-mode="log" data-m="박형민"><span class="dot"></span>아빠 · 박형민</button>
+      <button class="shelf-slot" data-mode="log" data-m="이희연"><span class="dot"></span>엄마 · 이희연</button>
+      <button class="shelf-slot" data-mode="log" data-m="박한별"><span class="dot"></span>큰딸 · 박한별</button>
+      <button class="shelf-slot" data-mode="log" data-m="박한솔"><span class="dot"></span>작은딸 · 박한솔</button>
+      <div class="shelf-gap"></div>
+      <button class="shelf-slot shelf-slot-gold" data-mode="wrap"><span class="dot"></span>연간 통계</button>
+    </nav>
+  </aside>
+
+  <main class="main">
+    <!-- ===== 기록 뷰 ===== -->
+    <section id="view-log">
+      <div class="main-head">
+        <h2 id="log-title">전체 기록</h2>
+        <button class="btn-add" id="btn-toggle-form">+ 새 기록</button>
+      </div>
+      <p class="stats-line" id="stats-line"></p>
+
+      <div class="form-card" id="form-card">
+        <p class="form-title">오늘 읽은 기록 남기기</p>
+        <div class="grid">
+          <div class="field">
+            <label>읽은 사람</label>
+            <select id="f-member">
+              <option value="박형민">아빠 · 박형민</option>
+              <option value="이희연">엄마 · 이희연</option>
+              <option value="박한별">큰딸 · 박한별</option>
+              <option value="박한솔">작은딸 · 박한솔</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>책 제목</label>
+            <input type="text" id="f-title" placeholder="예) 어린 왕자">
+          </div>
+          <div class="field">
+            <label>읽은 기간</label>
+            <div class="range-row">
+              <input type="date" id="f-start-date">
+              <span>~</span>
+              <input type="date" id="f-end-date">
+            </div>
+          </div>
+          <div class="field">
+            <label>읽은 페이지</label>
+            <div class="range-row">
+              <input type="number" id="f-start-page" placeholder="시작" min="0">
+              <span>~</span>
+              <input type="number" id="f-end-page" placeholder="끝" min="0">
+            </div>
+          </div>
+          <div class="field full">
+            <label>진행 상태</label>
+            <div class="status-toggle">
+              <button type="button" class="status-btn active" data-s="reading" id="btn-status-reading">읽는 중</button>
+              <button type="button" class="status-btn" data-s="done" id="btn-status-done">완독!</button>
+            </div>
+          </div>
+          <div class="field full">
+            <label>읽은 내용 및 느낌</label>
+            <textarea id="f-content" placeholder="자유롭게 적어보세요."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-ghost" id="btn-cancel">취소</button>
+          <button class="btn-save" id="btn-save">기록 저장</button>
+        </div>
+      </div>
+
+      <div id="entries"></div>
+    </section>
+
+    <!-- ===== 연간 통계 뷰 ===== -->
+    <section id="view-wrap" hidden>
+      <div class="main-head">
+        <h2>연간 통계</h2>
+      </div>
+      <div class="year-switch">
+        <button id="y-prev">‹</button>
+        <span class="y" id="y-label">2026</span>
+        <button id="y-next">›</button>
+      </div>
+
+      <div class="stat-tiles">
+        <div class="tile"><div class="num" id="stat-entries">0</div><div class="lab">총 기록</div></div>
+        <div class="tile"><div class="num" id="stat-done">0</div><div class="lab">완독한 책</div></div>
+        <div class="tile"><div class="num" id="stat-reading">0</div><div class="lab">읽는 중</div></div>
+        <div class="tile"><div class="num" id="stat-pages">0</div><div class="lab">읽은 페이지</div></div>
+      </div>
+
+      <div id="member-blocks"></div>
+    </section>
+  </main>
+</div>
+
+<p class="foot">가족의 책장에, 오늘도 한 페이지가 쌓입니다</p>
+
+<script>
+/* =========================================================
+   Google Apps Script 웹 앱 연결 설정
+   아래 APPS_SCRIPT_URL 값을 본인의 배포된 웹 앱 URL로 바꿔주세요.
+   예: "https://script.google.com/macros/s/AKfycb.../exec"
+   ========================================================= */
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEs-P8oehus60yY3wB_AOhOWkCw3iRrMX8cxNyH894tyK-R4o4j-oXRf4x3hbjQxkRaA/exec";
+
+const IS_CONFIGURED = !APPS_SCRIPT_URL.includes("YOUR-DEPLOYMENT-ID");
+if(!IS_CONFIGURED){
+  document.getElementById('setup-banner').classList.add('show');
+}
+
+const MEMBERS = ["박형민","이희연","박한별","박한솔"];
+const MLABEL = {"박형민":"아빠 · 박형민","이희연":"엄마 · 이희연","박한별":"큰딸 · 박한별","박한솔":"작은딸 · 박한솔"};
+const MSHORT = {"전체":"전체 기록","박형민":"아빠 · 박형민","이희연":"엄마 · 이희연","박한별":"큰딸 · 박한별","박한솔":"작은딸 · 박한솔"};
+
+let entries = [];
+let activeFilter = "전체";
+let mode = "log";
+let currentYear = new Date().getFullYear();
+let formStatus = "reading";
+
+const entriesEl = document.getElementById('entries');
+const statsLine = document.getElementById('stats-line');
+const formCard = document.getElementById('form-card');
+const logTitle = document.getElementById('log-title');
+const syncDot = document.getElementById('sync-dot');
+
+function esc(s){
+  return (s||"").replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+}
+function fmtDate(d){
+  if(!d) return "";
+  const s = String(d);
+  const [y,m,day] = s.split("-");
+  return `${parseInt(m)}/${parseInt(day)}`;
+}
+function fmtRange(entry){
+  const parts = [];
+  if(entry.startDate || entry.endDate){
+    const a = fmtDate(entry.startDate), b = fmtDate(entry.endDate);
+    parts.push(a && b ? `${a} – ${b}` : (a || b));
+  }
+  if(entry.startPage || entry.endPage){
+    parts.push(`${entry.startPage || "?"} ~ ${entry.endPage || "?"}쪽`);
+  }
+  return parts;
+}
+function entryYear(e){
+  const src = e.startDate || e.endDate;
+  if(src) return parseInt(String(src).split("-")[0]);
+  return new Date(e.createdAt || Date.now()).getFullYear();
+}
+function entryStatus(e){
+  return e.status === "done" ? "done" : "reading";
+}
+
+/* ===== Google Apps Script(Sheets) REST 통신 =====
+   POST는 Content-Type을 text/plain으로 보내 CORS preflight를 피하고,
+   Apps Script 쪽에서 e.postData.contents를 JSON.parse합니다. */
+async function fetchEntriesFromDB(){
+  if(!IS_CONFIGURED) return [];
+  try{
+    const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
+    const data = await res.json();
+    return (data.entries || []).map(e => ({...e, id:String(e.id)}));
+  }catch(e){
+    console.error('불러오기 실패', e);
+    return [];
+  }
+}
+async function putEntryToDB(entry){
+  if(!IS_CONFIGURED) return;
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'add', entry})
+    });
+  }catch(e){ console.error('저장 실패', e); }
+}
+async function deleteEntryFromDB(id){
+  if(!IS_CONFIGURED) return;
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'delete', id})
+    });
+  }catch(e){ console.error('삭제 실패', e); }
+}
+
+async function refreshFromDB(silent){
+  if(!silent) syncDot.classList.add('busy');
+  entries = await fetchEntriesFromDB();
+  syncDot.classList.remove('busy');
+  renderAll();
+}
+
+function renderAll(){
+  renderLog();
+  renderWrap();
+}
+
+function renderLog(){
+  logTitle.textContent = MSHORT[activeFilter];
+  const list = activeFilter === "전체" ? entries : entries.filter(e=>e.member===activeFilter);
+  const sorted = [...list].sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
+
+  statsLine.textContent = sorted.length ? `총 ${sorted.length}개의 기록` : "";
+
+  if(sorted.length === 0){
+    entriesEl.innerHTML = `<div class="empty"><b>아직 기록이 없어요</b>'+ 새 기록'을 눌러 첫 페이지를 남겨보세요.</div>`;
+    return;
+  }
+
+  entriesEl.innerHTML = sorted.map(e=>{
+    const meta = fmtRange(e).map(p=>`<span class="meta-pill">${esc(p)}</span>`).join("");
+    const content = esc(e.content);
+    const st = entryStatus(e);
+    const statusHtml = st === "done"
+      ? `<span class="stamp">완독</span>`
+      : `<span class="status-reading">읽는 중</span>`;
+    return `
+    <div class="entry" data-id="${e.id}">
+      <button class="entry-del" data-id="${e.id}">삭제</button>
+      <div class="entry-top">
+        <p class="entry-title">${esc(e.title || "제목 없음")}</p>
+        <div class="badge-row">
+          ${statusHtml}
+          <span class="badge" data-m="${e.member}">${e.member}</span>
+        </div>
+      </div>
+      <div class="entry-meta">${meta}</div>
+      ${content ? `<div class="entry-content">${content}</div>` : ""}
+    </div>`;
+  }).join("");
+
+  document.querySelectorAll('.entry-del').forEach(btn=>btn.addEventListener('click', onDeleteClick));
+}
+
+async function onDeleteClick(ev){
+  const btn = ev.currentTarget;
+  if(!btn.classList.contains('confirm')){
+    btn.classList.add('confirm');
+    btn.textContent = '정말 삭제?';
+    btn._timer = setTimeout(()=>{ btn.classList.remove('confirm'); btn.textContent = '삭제'; }, 2800);
+    return;
+  }
+  clearTimeout(btn._timer);
+  const id = btn.dataset.id;
+  entries = entries.filter(e=> String(e.id) !== String(id));
+  renderAll();
+  await deleteEntryFromDB(id);
+}
+
+function renderWrap(){
+  document.getElementById('y-label').textContent = currentYear;
+  const yearEntries = entries.filter(e=> entryYear(e) === currentYear);
+
+  document.getElementById('stat-entries').textContent = yearEntries.length;
+
+  let totalPages = 0;
+  yearEntries.forEach(e=>{
+    const sp = parseInt(e.startPage), ep = parseInt(e.endPage);
+    if(!isNaN(sp) && !isNaN(ep) && ep >= sp) totalPages += (ep - sp + 1);
+  });
+  document.getElementById('stat-pages').textContent = totalPages.toLocaleString();
+
+  const doneSets = {}, allSets = {};
+  MEMBERS.forEach(m=>{ doneSets[m] = new Set(); allSets[m] = new Set(); });
+  yearEntries.forEach(e=>{
+    const t = (e.title||"").trim();
+    if(!t || !allSets[e.member]) return;
+    allSets[e.member].add(t);
+    if(entryStatus(e) === "done") doneSets[e.member].add(t);
+  });
+
+  let totalDone = 0, totalReading = 0;
+  const readingSets = {};
+  MEMBERS.forEach(m=>{
+    readingSets[m] = new Set([...allSets[m]].filter(t=> !doneSets[m].has(t)));
+    totalDone += doneSets[m].size;
+    totalReading += readingSets[m].size;
+  });
+  document.getElementById('stat-done').textContent = totalDone;
+  document.getElementById('stat-reading').textContent = totalReading;
+
+  const maxCount = Math.max(1, ...MEMBERS.map(m=> yearEntries.filter(e=>e.member===m).length));
+
+  const container = document.getElementById('member-blocks');
+  container.innerHTML = MEMBERS.map(m=>{
+    const cnt = yearEntries.filter(e=>e.member===m).length;
+    const pct = Math.round((cnt / maxCount) * 100);
+    const doneChips = [...doneSets[m]].map(t=>`<span class="title-chip done" data-m="${m}">${esc(t)}</span>`).join("");
+    const readingChips = [...readingSets[m]].map(t=>`<span class="title-chip reading">${esc(t)}</span>`).join("");
+    const hasAny = doneSets[m].size || readingSets[m].size;
+    return `
+    <div class="member-block">
+      <div class="mb-head">
+        <span class="mb-name">${MLABEL[m]}</span>
+        <span class="mb-count">완독 ${doneSets[m].size} · 읽는 중 ${readingSets[m].size}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" data-m="${m}" style="width:${cnt? pct : 0}%"></div></div>
+      ${hasAny ? `
+        ${doneSets[m].size ? `<div class="chip-group"><div class="cg-lab">완독</div><div class="title-chips">${doneChips}</div></div>` : ""}
+        ${readingSets[m].size ? `<div class="chip-group"><div class="cg-lab">읽는 중</div><div class="title-chips">${readingChips}</div></div>` : ""}
+      ` : `<span class="mb-empty">${currentYear}년 기록 없음</span>`}
+    </div>`;
+  }).join("");
+}
+
+// sidebar navigation
+document.getElementById('shelf-list').addEventListener('click', (ev)=>{
+  const t = ev.target.closest('.shelf-slot');
+  if(!t) return;
+  document.querySelectorAll('.shelf-slot').forEach(s=>s.classList.remove('active'));
+  t.classList.add('active');
+  mode = t.dataset.mode;
+  if(mode === 'log'){
+    activeFilter = t.dataset.m;
+    document.getElementById('view-log').hidden = false;
+    document.getElementById('view-wrap').hidden = true;
+    renderLog();
+  }else{
+    document.getElementById('view-log').hidden = true;
+    document.getElementById('view-wrap').hidden = false;
+    renderWrap();
+  }
+});
+
+// year switch
+document.getElementById('y-prev').addEventListener('click', ()=>{ currentYear--; renderWrap(); });
+document.getElementById('y-next').addEventListener('click', ()=>{ currentYear++; renderWrap(); });
+
+// status toggle in form
+function setFormStatus(s){
+  formStatus = s;
+  document.getElementById('btn-status-reading').classList.toggle('active', s === 'reading');
+  document.getElementById('btn-status-done').classList.toggle('active', s === 'done');
+}
+document.getElementById('btn-status-reading').addEventListener('click', ()=> setFormStatus('reading'));
+document.getElementById('btn-status-done').addEventListener('click', ()=> setFormStatus('done'));
+
+// form toggle
+const btnToggle = document.getElementById('btn-toggle-form');
+btnToggle.addEventListener('click', ()=>{
+  formCard.classList.toggle('open');
+  if(formCard.classList.contains('open') && activeFilter !== "전체"){
+    document.getElementById('f-member').value = activeFilter;
+  }
+});
+document.getElementById('btn-cancel').addEventListener('click', ()=> formCard.classList.remove('open'));
+
+document.getElementById('btn-save').addEventListener('click', async ()=>{
+  const member = document.getElementById('f-member').value;
+  const title = document.getElementById('f-title').value.trim();
+  const startDate = document.getElementById('f-start-date').value;
+  const endDate = document.getElementById('f-end-date').value;
+  const startPage = document.getElementById('f-start-page').value;
+  const endPage = document.getElementById('f-end-page').value;
+  const content = document.getElementById('f-content').value.trim();
+
+  if(!title){
+    const titleInput = document.getElementById('f-title');
+    titleInput.focus();
+    titleInput.style.borderColor = '#E23F6B';
+    setTimeout(()=>{ titleInput.style.borderColor=''; }, 1500);
+    return;
+  }
+
+  const newEntry = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    member, title, startDate, endDate, startPage, endPage, content,
+    status: formStatus,
+    createdAt: Date.now()
+  };
+
+  entries.push(newEntry);
+  document.getElementById('f-title').value = "";
+  document.getElementById('f-start-date').value = "";
+  document.getElementById('f-end-date').value = "";
+  document.getElementById('f-start-page').value = "";
+  document.getElementById('f-end-page').value = "";
+  document.getElementById('f-content').value = "";
+  setFormStatus('reading');
+  formCard.classList.remove('open');
+  renderAll();
+
+  syncDot.classList.add('busy');
+  await putEntryToDB(newEntry);
+  syncDot.classList.remove('busy');
+});
+
+// 최초 로드 + 다른 가족 구성원의 변경사항을 반영하기 위한 주기적 새로고침
+refreshFromDB(false);
+setInterval(()=> refreshFromDB(true), 12000);
+</script>
+</body>
+</html>
