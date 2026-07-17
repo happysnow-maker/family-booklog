@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>북로그 — 가족 독서기록노트</title>
+<title>패밀리로그 — 우리 가족의 모든 기록</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -19,6 +19,11 @@
     --mom:#FF7FA6;    --mom-tint:#FFE9F0;
     --girl1:#FFA23C;  --girl1-tint:#FFEEDA;
     --girl2:#B08CFF;  --girl2-tint:#F3EDFF;
+
+    --t-book:#8B5E34;
+    --t-movie:#3B4C99;
+    --t-youtube:#D93025;
+    --t-other:#767066;
 
     --stamp:#C1483A;
   }
@@ -36,7 +41,7 @@
   }
 
   .setup-banner{
-    max-width:900px;margin:0 auto 16px;
+    max-width:920px;margin:0 auto 16px;
     background:#FFF4E0;border:1.5px dashed #D9A63E;border-radius:14px;
     padding:14px 16px;font-size:13px;line-height:1.6;color:#6B4E12;
     display:none;
@@ -45,7 +50,7 @@
   .setup-banner code{background:#00000010;padding:1px 6px;border-radius:5px;}
 
   .app{
-    max-width:900px;margin:0 auto;
+    max-width:920px;margin:0 auto;
     display:flex;
     background:var(--card);
     border-radius:26px;
@@ -62,8 +67,8 @@
     padding:20px 12px;
   }
   .nameplate{padding:2px 6px 18px;}
-  .np-title{display:block;font-family:'Gaegu',sans-serif;font-weight:700;font-size:26px;color:var(--ink);line-height:1;}
-  .np-sub{display:block;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:0.12em;text-transform:uppercase;margin-top:5px;}
+  .np-title{display:block;font-family:'Gaegu',sans-serif;font-weight:700;font-size:24px;color:var(--ink);line-height:1.1;}
+  .np-sub{display:block;font-size:10px;font-weight:700;color:var(--ink-soft);letter-spacing:0.06em;margin-top:5px;}
   .sync-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:#9BD6A8;margin-right:5px;}
   .sync-dot.busy{background:#E8C36A;}
 
@@ -100,8 +105,21 @@
   /* ===== main panel ===== */
   .main{flex:1;min-width:0;padding:26px 28px 32px;}
   .main-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px;flex-wrap:wrap;}
-  .main-head h2{font-family:'Gaegu',sans-serif;font-size:26px;font-weight:700;margin:0;}
-  .stats-line{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:2px 0 16px;}
+  .main-head h2{font-family:'Gaegu',sans-serif;font-size:24px;font-weight:700;margin:0;}
+  .stats-line{font-size:12.5px;color:var(--ink-soft);font-weight:600;margin:2px 0 12px;}
+
+  .type-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .tchip{
+    border:1px solid var(--line);background:var(--card);cursor:pointer;
+    font-family:'Pretendard',sans-serif;font-weight:700;font-size:12px;
+    padding:6px 12px;border-radius:999px;color:var(--ink-soft);transition:.15s ease;
+  }
+  .tchip.active{color:#fff;border-color:transparent;}
+  .tchip[data-t="전체"].active{background:var(--ink);}
+  .tchip[data-t="book"].active{background:var(--t-book);}
+  .tchip[data-t="movie"].active{background:var(--t-movie);}
+  .tchip[data-t="youtube"].active{background:var(--t-youtube);}
+  .tchip[data-t="other"].active{background:var(--t-other);}
 
   .btn-add{
     background:var(--ink);color:#fff;border:none;border-radius:999px;
@@ -117,8 +135,21 @@
   }
   .form-card.open{display:block;}
   .form-title{font-family:'Gaegu',sans-serif;font-size:19px;font-weight:700;margin:0 0 14px;}
+
+  .type-toggle{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .type-btn{
+    flex:1;min-width:70px;border:1.5px solid var(--line);background:var(--card);
+    border-radius:10px;padding:8px 6px;font-size:12.5px;font-weight:700;
+    color:var(--ink-soft);cursor:pointer;text-align:center;
+  }
+  .type-btn.active{color:#fff;border-color:transparent;}
+  .type-btn.active[data-t="book"]{background:var(--t-book);}
+  .type-btn.active[data-t="movie"]{background:var(--t-movie);}
+  .type-btn.active[data-t="youtube"]{background:var(--t-youtube);}
+  .type-btn.active[data-t="other"]{background:var(--t-other);}
+
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
-  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;}
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;position:relative;}
   .field.full{grid-column:1/-1;}
   label{font-size:11.5px;color:var(--ink-soft);font-weight:700;}
   input,select,textarea{
@@ -130,6 +161,27 @@
   textarea{resize:vertical;min-height:82px;line-height:1.6;}
   .range-row{display:flex;align-items:center;gap:6px;}
   .range-row span{color:var(--ink-soft);font-size:12px;}
+
+  /* book search dropdown */
+  .search-dd{
+    position:absolute;top:100%;left:0;right:0;margin-top:4px;
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:0 8px 20px -8px rgba(0,0,0,0.25);z-index:20;
+    max-height:260px;overflow-y:auto;padding:6px;
+  }
+  .book-result{
+    all:unset;display:flex;gap:10px;align-items:center;width:100%;
+    padding:7px 8px;border-radius:8px;cursor:pointer;box-sizing:border-box;
+  }
+  .book-result:hover{background:var(--bg);}
+  .book-result img{width:30px;height:42px;object-fit:cover;border-radius:4px;flex-shrink:0;background:var(--line);}
+  .book-noimg{width:30px;height:42px;border-radius:4px;background:var(--line);flex-shrink:0;display:block;}
+  .br-text{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .br-text b{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .br-text i{font-size:11px;font-style:normal;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .thumb-preview{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;color:var(--ink-soft);}
+  .thumb-preview img{width:24px;height:34px;object-fit:cover;border-radius:4px;}
 
   .status-toggle{display:flex;gap:8px;}
   .status-btn{
@@ -152,8 +204,18 @@
     position:relative;background:var(--card);border:1px solid var(--line);
     border-radius:16px;padding:15px 17px;margin-bottom:10px;
   }
+  .entry-row{display:flex;gap:12px;}
+  .entry-thumb{width:44px;height:60px;object-fit:cover;border-radius:6px;flex-shrink:0;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+  .entry-body{flex:1;min-width:0;}
   .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .entry-title-wrap{min-width:0;}
+  .entry-type-tag{font-size:10px;font-weight:800;padding:2px 8px;border-radius:999px;color:#fff;display:inline-block;margin-bottom:4px;}
+  .entry-type-tag.book{background:var(--t-book);}
+  .entry-type-tag.movie{background:var(--t-movie);}
+  .entry-type-tag.youtube{background:var(--t-youtube);}
+  .entry-type-tag.other{background:var(--t-other);}
   .entry-title{font-size:15.5px;font-weight:800;margin:0;line-height:1.4;}
+  .entry-creator{font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:1px;}
   .badge-row{display:flex;gap:8px;flex-shrink:0;align-items:center;}
   .badge{font-size:10.5px;font-weight:800;color:#fff;padding:4px 10px;border-radius:999px;white-space:nowrap;}
   .badge[data-m="박형민"]{background:var(--dad);}
@@ -190,10 +252,13 @@
     width:30px;height:30px;cursor:pointer;font-size:14px;font-weight:800;color:var(--ink);}
   .year-switch .y{font-family:'Gaegu',sans-serif;font-size:22px;font-weight:700;}
 
-  .stat-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px;}
+  .stat-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;}
   .tile{background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 10px;}
   .tile .num{font-size:21px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);}
   .tile .lab{font-size:10.5px;color:var(--ink-soft);font-weight:700;margin-top:2px;}
+
+  .type-summary{font-size:12px;color:var(--ink-soft);font-weight:600;margin:0 0 18px;}
+  .type-summary b{color:var(--ink);}
 
   .member-block{background:var(--bg);border:1px solid var(--line);border-radius:16px;
     padding:14px 16px;margin-bottom:10px;}
@@ -226,7 +291,7 @@
       flex-direction:row;align-items:center;padding:14px 12px;gap:10px;
     }
     .nameplate{padding:0;}
-    .np-title{font-size:22px;}
+    .np-title{font-size:20px;}
     .np-sub{display:none;}
     .shelf-list{flex-direction:row;overflow-x:auto;gap:6px;}
     .shelf-slot{white-space:nowrap;}
@@ -240,15 +305,15 @@
 <body>
 
 <div class="setup-banner" id="setup-banner">
-  ⚠️ <b>설정이 필요해요.</b> 아직 Google 스프레드시트(Apps Script)에 연결되지 않았어요. 코드 상단의 <code>APPS_SCRIPT_URL</code> 값을 본인의 웹 앱 URL로 바꿔주세요. 그 전까지는 기록이 저장되지 않아요.
+  ⚠️ <b>설정이 필요해요.</b> 아직 Google 스프레드시트(Apps Script)에 연결되지 않았어요. 코드 상단의 <code>APPS_SCRIPT_URL</code> 값을 본인의 웹 앱 URL로 바꿔주세요.
 </div>
 
 <div class="app">
 
   <aside class="sidebar">
     <div class="nameplate">
-      <span class="np-title">북로그</span>
-      <span class="np-sub"><span class="sync-dot" id="sync-dot"></span>Family Book Diary</span>
+      <span class="np-title">패밀리로그</span>
+      <span class="np-sub"><span class="sync-dot" id="sync-dot"></span>책·영화·유튜브, 우리 가족의 모든 기록</span>
     </div>
     <nav class="shelf-list" id="shelf-list">
       <button class="shelf-slot active" data-mode="log" data-m="전체"><span class="dot"></span>전체 기록</button>
@@ -270,11 +335,27 @@
       </div>
       <p class="stats-line" id="stats-line"></p>
 
+      <div class="type-chips" id="type-chips">
+        <button class="tchip active" data-t="전체">전체</button>
+        <button class="tchip" data-t="book">책</button>
+        <button class="tchip" data-t="movie">영화</button>
+        <button class="tchip" data-t="youtube">유튜브</button>
+        <button class="tchip" data-t="other">기타</button>
+      </div>
+
       <div class="form-card" id="form-card">
-        <p class="form-title">오늘 읽은 기록 남기기</p>
+        <p class="form-title">새로운 기록 남기기</p>
+
+        <div class="type-toggle" id="type-toggle">
+          <button type="button" class="type-btn active" data-t="book">📕 책</button>
+          <button type="button" class="type-btn" data-t="movie">🎬 영화</button>
+          <button type="button" class="type-btn" data-t="youtube">▶️ 유튜브</button>
+          <button type="button" class="type-btn" data-t="other">✏️ 기타</button>
+        </div>
+
         <div class="grid">
           <div class="field">
-            <label>읽은 사람</label>
+            <label>기록한 사람</label>
             <select id="f-member">
               <option value="박형민">아빠 · 박형민</option>
               <option value="이희연">엄마 · 이희연</option>
@@ -283,18 +364,27 @@
             </select>
           </div>
           <div class="field">
-            <label>책 제목</label>
-            <input type="text" id="f-title" placeholder="예) 어린 왕자">
+            <label id="lab-title">책 제목 (검색해서 선택)</label>
+            <input type="text" id="f-title" placeholder="제목을 입력하세요" autocomplete="off">
+            <div class="search-dd" id="search-dd" hidden></div>
+            <div class="thumb-preview" id="thumb-preview" hidden>
+              <img id="thumb-preview-img" src="" alt="">
+              <span>표지 이미지가 선택됐어요</span>
+            </div>
+          </div>
+          <div class="field" id="field-creator">
+            <label id="lab-creator">저자</label>
+            <input type="text" id="f-creator" placeholder="선택 입력">
           </div>
           <div class="field">
-            <label>읽은 기간</label>
+            <label id="lab-daterange">읽은 기간</label>
             <div class="range-row">
               <input type="date" id="f-start-date">
               <span>~</span>
               <input type="date" id="f-end-date">
             </div>
           </div>
-          <div class="field">
+          <div class="field" id="field-pages">
             <label>읽은 페이지</label>
             <div class="range-row">
               <input type="number" id="f-start-page" placeholder="시작" min="0">
@@ -310,7 +400,7 @@
             </div>
           </div>
           <div class="field full">
-            <label>읽은 내용 및 느낌</label>
+            <label>감상 / 메모</label>
             <textarea id="f-content" placeholder="자유롭게 적어보세요."></textarea>
           </div>
         </div>
@@ -336,10 +426,11 @@
 
       <div class="stat-tiles">
         <div class="tile"><div class="num" id="stat-entries">0</div><div class="lab">총 기록</div></div>
-        <div class="tile"><div class="num" id="stat-done">0</div><div class="lab">완독한 책</div></div>
-        <div class="tile"><div class="num" id="stat-reading">0</div><div class="lab">읽는 중</div></div>
-        <div class="tile"><div class="num" id="stat-pages">0</div><div class="lab">읽은 페이지</div></div>
+        <div class="tile"><div class="num" id="stat-done">0</div><div class="lab">완료</div></div>
+        <div class="tile"><div class="num" id="stat-reading">0</div><div class="lab">진행 중</div></div>
+        <div class="tile"><div class="num" id="stat-pages">0</div><div class="lab">책 페이지</div></div>
       </div>
+      <p class="type-summary" id="type-summary"></p>
 
       <div id="member-blocks"></div>
     </section>
@@ -351,8 +442,6 @@
 <script>
 /* =========================================================
    Google Apps Script 웹 앱 연결 설정
-   아래 APPS_SCRIPT_URL 값을 본인의 배포된 웹 앱 URL로 바꿔주세요.
-   예: "https://script.google.com/macros/s/AKfycb.../exec"
    ========================================================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEs-P8oehus60yY3wB_AOhOWkCw3iRrMX8cxNyH894tyK-R4o4j-oXRf4x3hbjQxkRaA/exec";
 
@@ -364,18 +453,33 @@ if(!IS_CONFIGURED){
 const MEMBERS = ["박형민","이희연","박한별","박한솔"];
 const MLABEL = {"박형민":"아빠 · 박형민","이희연":"엄마 · 이희연","박한별":"큰딸 · 박한별","박한솔":"작은딸 · 박한솔"};
 const MSHORT = {"전체":"전체 기록","박형민":"아빠 · 박형민","이희연":"엄마 · 이희연","박한별":"큰딸 · 박한별","박한솔":"작은딸 · 박한솔"};
+const TLABEL = {book:"책", movie:"영화", youtube:"유튜브", other:"기타"};
+const STATUS_LABEL = {
+  book:   {reading:"읽는 중", done:"완독!"},
+  movie:  {reading:"보는 중", done:"다봤어요!"},
+  youtube:{reading:"보는 중", done:"다봤어요!"},
+  other:  {reading:"진행 중", done:"완료!"}
+};
+const CREATOR_LABEL = {book:"저자", movie:"감독", youtube:"채널명"};
 
 let entries = [];
-let activeFilter = "전체";
+let activeFilter = "전체";   // 가족 구성원
+let activeType = "전체";      // 종류
 let mode = "log";
 let currentYear = new Date().getFullYear();
 let formStatus = "reading";
+let formType = "book";
+let formThumbnail = "";
 
 const entriesEl = document.getElementById('entries');
 const statsLine = document.getElementById('stats-line');
 const formCard = document.getElementById('form-card');
 const logTitle = document.getElementById('log-title');
 const syncDot = document.getElementById('sync-dot');
+const titleInput = document.getElementById('f-title');
+const searchDD = document.getElementById('search-dd');
+const thumbPreview = document.getElementById('thumb-preview');
+const thumbPreviewImg = document.getElementById('thumb-preview-img');
 
 function esc(s){
   return (s||"").replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
@@ -392,7 +496,7 @@ function fmtRange(entry){
     const a = fmtDate(entry.startDate), b = fmtDate(entry.endDate);
     parts.push(a && b ? `${a} – ${b}` : (a || b));
   }
-  if(entry.startPage || entry.endPage){
+  if((entry.type||'book') === 'book' && (entry.startPage || entry.endPage)){
     parts.push(`${entry.startPage || "?"} ~ ${entry.endPage || "?"}쪽`);
   }
   return parts;
@@ -405,10 +509,11 @@ function entryYear(e){
 function entryStatus(e){
   return e.status === "done" ? "done" : "reading";
 }
+function entryType(e){
+  return e.type || "book";
+}
 
-/* ===== Google Apps Script(Sheets) REST 통신 =====
-   POST는 Content-Type을 text/plain으로 보내 CORS preflight를 피하고,
-   Apps Script 쪽에서 e.postData.contents를 JSON.parse합니다. */
+/* ===== Google Apps Script(Sheets) REST 통신 ===== */
 async function fetchEntriesFromDB(){
   if(!IS_CONFIGURED) return [];
   try{
@@ -455,7 +560,8 @@ function renderAll(){
 
 function renderLog(){
   logTitle.textContent = MSHORT[activeFilter];
-  const list = activeFilter === "전체" ? entries : entries.filter(e=>e.member===activeFilter);
+  let list = activeFilter === "전체" ? entries : entries.filter(e=>e.member===activeFilter);
+  if(activeType !== "전체") list = list.filter(e=> entryType(e) === activeType);
   const sorted = [...list].sort((a,b)=> (b.createdAt||0) - (a.createdAt||0));
 
   statsLine.textContent = sorted.length ? `총 ${sorted.length}개의 기록` : "";
@@ -466,24 +572,37 @@ function renderLog(){
   }
 
   entriesEl.innerHTML = sorted.map(e=>{
+    const type = entryType(e);
     const meta = fmtRange(e).map(p=>`<span class="meta-pill">${esc(p)}</span>`).join("");
     const content = esc(e.content);
     const st = entryStatus(e);
+    const labels = STATUS_LABEL[type] || STATUS_LABEL.other;
     const statusHtml = st === "done"
-      ? `<span class="stamp">완독</span>`
-      : `<span class="status-reading">읽는 중</span>`;
+      ? `<span class="stamp">${labels.done.replace('!','')}</span>`
+      : `<span class="status-reading">${labels.reading}</span>`;
+    const thumbHtml = e.thumbnail ? `<img class="entry-thumb" src="${e.thumbnail}" alt="">` : "";
+    const creatorHtml = e.creator ? `<div class="entry-creator">${esc(e.creator)}</div>` : "";
     return `
     <div class="entry" data-id="${e.id}">
       <button class="entry-del" data-id="${e.id}">삭제</button>
-      <div class="entry-top">
-        <p class="entry-title">${esc(e.title || "제목 없음")}</p>
-        <div class="badge-row">
-          ${statusHtml}
-          <span class="badge" data-m="${e.member}">${e.member}</span>
+      <div class="entry-row">
+        ${thumbHtml}
+        <div class="entry-body">
+          <div class="entry-top">
+            <div class="entry-title-wrap">
+              <span class="entry-type-tag ${type}">${TLABEL[type]}</span>
+              <p class="entry-title">${esc(e.title || "제목 없음")}</p>
+              ${creatorHtml}
+            </div>
+            <div class="badge-row">
+              ${statusHtml}
+              <span class="badge" data-m="${e.member}">${e.member}</span>
+            </div>
+          </div>
+          <div class="entry-meta">${meta}</div>
+          ${content ? `<div class="entry-content">${content}</div>` : ""}
         </div>
       </div>
-      <div class="entry-meta">${meta}</div>
-      ${content ? `<div class="entry-content">${content}</div>` : ""}
     </div>`;
   }).join("");
 
@@ -513,18 +632,25 @@ function renderWrap(){
 
   let totalPages = 0;
   yearEntries.forEach(e=>{
+    if(entryType(e) !== 'book') return;
     const sp = parseInt(e.startPage), ep = parseInt(e.endPage);
     if(!isNaN(sp) && !isNaN(ep) && ep >= sp) totalPages += (ep - sp + 1);
   });
   document.getElementById('stat-pages').textContent = totalPages.toLocaleString();
+
+  const typeCounts = {book:0, movie:0, youtube:0, other:0};
+  yearEntries.forEach(e=> typeCounts[entryType(e)]++);
+  document.getElementById('type-summary').innerHTML =
+    `<b>책</b> ${typeCounts.book} · <b>영화</b> ${typeCounts.movie} · <b>유튜브</b> ${typeCounts.youtube} · <b>기타</b> ${typeCounts.other}`;
 
   const doneSets = {}, allSets = {};
   MEMBERS.forEach(m=>{ doneSets[m] = new Set(); allSets[m] = new Set(); });
   yearEntries.forEach(e=>{
     const t = (e.title||"").trim();
     if(!t || !allSets[e.member]) return;
-    allSets[e.member].add(t);
-    if(entryStatus(e) === "done") doneSets[e.member].add(t);
+    const key = `${TLABEL[entryType(e)]} · ${t}`;
+    allSets[e.member].add(key);
+    if(entryStatus(e) === "done") doneSets[e.member].add(key);
   });
 
   let totalDone = 0, totalReading = 0;
@@ -550,12 +676,12 @@ function renderWrap(){
     <div class="member-block">
       <div class="mb-head">
         <span class="mb-name">${MLABEL[m]}</span>
-        <span class="mb-count">완독 ${doneSets[m].size} · 읽는 중 ${readingSets[m].size}</span>
+        <span class="mb-count">완료 ${doneSets[m].size} · 진행 중 ${readingSets[m].size}</span>
       </div>
       <div class="bar-track"><div class="bar-fill" data-m="${m}" style="width:${cnt? pct : 0}%"></div></div>
       ${hasAny ? `
-        ${doneSets[m].size ? `<div class="chip-group"><div class="cg-lab">완독</div><div class="title-chips">${doneChips}</div></div>` : ""}
-        ${readingSets[m].size ? `<div class="chip-group"><div class="cg-lab">읽는 중</div><div class="title-chips">${readingChips}</div></div>` : ""}
+        ${doneSets[m].size ? `<div class="chip-group"><div class="cg-lab">완료</div><div class="title-chips">${doneChips}</div></div>` : ""}
+        ${readingSets[m].size ? `<div class="chip-group"><div class="cg-lab">진행 중</div><div class="title-chips">${readingChips}</div></div>` : ""}
       ` : `<span class="mb-empty">${currentYear}년 기록 없음</span>`}
     </div>`;
   }).join("");
@@ -580,6 +706,16 @@ document.getElementById('shelf-list').addEventListener('click', (ev)=>{
   }
 });
 
+// type filter chips (log view)
+document.getElementById('type-chips').addEventListener('click', (ev)=>{
+  const t = ev.target.closest('.tchip');
+  if(!t) return;
+  activeType = t.dataset.t;
+  document.querySelectorAll('.tchip').forEach(c=>c.classList.remove('active'));
+  t.classList.add('active');
+  renderLog();
+});
+
 // year switch
 document.getElementById('y-prev').addEventListener('click', ()=>{ currentYear--; renderWrap(); });
 document.getElementById('y-next').addEventListener('click', ()=>{ currentYear++; renderWrap(); });
@@ -592,6 +728,108 @@ function setFormStatus(s){
 }
 document.getElementById('btn-status-reading').addEventListener('click', ()=> setFormStatus('reading'));
 document.getElementById('btn-status-done').addEventListener('click', ()=> setFormStatus('done'));
+function refreshStatusLabels(){
+  const l = STATUS_LABEL[formType] || STATUS_LABEL.other;
+  document.getElementById('btn-status-reading').textContent = l.reading;
+  document.getElementById('btn-status-done').textContent = l.done;
+}
+
+// type toggle in form — switches visible fields
+function setFormType(t){
+  formType = t;
+  document.querySelectorAll('.type-btn').forEach(b=> b.classList.toggle('active', b.dataset.t === t));
+  refreshStatusLabels();
+  searchDD.hidden = true;
+  thumbPreview.hidden = true;
+  formThumbnail = "";
+
+  const labTitle = document.getElementById('lab-title');
+  const fieldCreator = document.getElementById('field-creator');
+  const labCreator = document.getElementById('lab-creator');
+  const fieldPages = document.getElementById('field-pages');
+  const labDate = document.getElementById('lab-daterange');
+
+  if(t === 'book'){
+    labTitle.textContent = '책 제목 (검색해서 선택)';
+    fieldCreator.hidden = false; labCreator.textContent = '저자';
+    fieldPages.hidden = false;
+    labDate.textContent = '읽은 기간';
+  }else if(t === 'movie'){
+    labTitle.textContent = '영화 제목';
+    fieldCreator.hidden = false; labCreator.textContent = '감독';
+    fieldPages.hidden = true;
+    labDate.textContent = '본 날짜';
+  }else if(t === 'youtube'){
+    labTitle.textContent = '영상 제목';
+    fieldCreator.hidden = false; labCreator.textContent = '채널명';
+    fieldPages.hidden = true;
+    labDate.textContent = '본 날짜';
+  }else{
+    labTitle.textContent = '제목';
+    fieldCreator.hidden = true;
+    fieldPages.hidden = true;
+    labDate.textContent = '날짜';
+  }
+}
+document.getElementById('type-toggle').addEventListener('click', (ev)=>{
+  const t = ev.target.closest('.type-btn');
+  if(!t) return;
+  setFormType(t.dataset.t);
+});
+
+// ===== 구글 도서 검색 (책 타입일 때만) =====
+let searchTimer;
+titleInput.addEventListener('input', ()=>{
+  formThumbnail = "";
+  thumbPreview.hidden = true;
+  if(formType !== 'book'){ searchDD.hidden = true; return; }
+  clearTimeout(searchTimer);
+  const q = titleInput.value.trim();
+  if(q.length < 2){ searchDD.hidden = true; return; }
+  searchTimer = setTimeout(()=> searchBooks(q), 350);
+});
+document.addEventListener('click', (ev)=>{
+  if(!searchDD.contains(ev.target) && ev.target !== titleInput){ searchDD.hidden = true; }
+});
+
+async function searchBooks(q){
+  try{
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5`);
+    const data = await res.json();
+    renderBookResults(data.items || []);
+  }catch(e){
+    console.error('책 검색 실패', e);
+  }
+}
+function renderBookResults(items){
+  if(!items.length){ searchDD.hidden = true; searchDD.innerHTML=''; return; }
+  searchDD.innerHTML = items.map((it,i)=>{
+    const info = it.volumeInfo || {};
+    const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
+    const author = (info.authors||[]).join(', ');
+    return `<button type="button" class="book-result" data-i="${i}">
+      ${thumb ? `<img src="${thumb.replace('http://','https://')}" alt="">` : `<span class="book-noimg"></span>`}
+      <span class="br-text"><b>${esc(info.title||'')}</b>${author?`<i>${esc(author)}</i>`:''}</span>
+    </button>`;
+  }).join('');
+  searchDD._items = items;
+  searchDD.hidden = false;
+}
+searchDD.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.book-result');
+  if(!btn) return;
+  const it = searchDD._items[parseInt(btn.dataset.i)];
+  const info = it.volumeInfo || {};
+  titleInput.value = info.title || '';
+  document.getElementById('f-creator').value = (info.authors||[]).join(', ');
+  const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
+  formThumbnail = thumb.replace('http://','https://');
+  if(formThumbnail){
+    thumbPreviewImg.src = formThumbnail;
+    thumbPreview.hidden = false;
+  }
+  searchDD.hidden = true;
+});
 
 // form toggle
 const btnToggle = document.getElementById('btn-toggle-form');
@@ -605,15 +843,15 @@ document.getElementById('btn-cancel').addEventListener('click', ()=> formCard.cl
 
 document.getElementById('btn-save').addEventListener('click', async ()=>{
   const member = document.getElementById('f-member').value;
-  const title = document.getElementById('f-title').value.trim();
+  const title = titleInput.value.trim();
+  const creator = document.getElementById('f-creator').value.trim();
   const startDate = document.getElementById('f-start-date').value;
   const endDate = document.getElementById('f-end-date').value;
-  const startPage = document.getElementById('f-start-page').value;
-  const endPage = document.getElementById('f-end-page').value;
+  const startPage = formType === 'book' ? document.getElementById('f-start-page').value : '';
+  const endPage = formType === 'book' ? document.getElementById('f-end-page').value : '';
   const content = document.getElementById('f-content').value.trim();
 
   if(!title){
-    const titleInput = document.getElementById('f-title');
     titleInput.focus();
     titleInput.style.borderColor = '#E23F6B';
     setTimeout(()=>{ titleInput.style.borderColor=''; }, 1500);
@@ -622,18 +860,22 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
 
   const newEntry = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-    member, title, startDate, endDate, startPage, endPage, content,
+    member, type: formType, title, creator, thumbnail: formThumbnail,
+    startDate, endDate, startPage, endPage, content,
     status: formStatus,
     createdAt: Date.now()
   };
 
   entries.push(newEntry);
-  document.getElementById('f-title').value = "";
+  titleInput.value = "";
+  document.getElementById('f-creator').value = "";
   document.getElementById('f-start-date').value = "";
   document.getElementById('f-end-date').value = "";
   document.getElementById('f-start-page').value = "";
   document.getElementById('f-end-page').value = "";
   document.getElementById('f-content').value = "";
+  formThumbnail = "";
+  thumbPreview.hidden = true;
   setFormStatus('reading');
   formCard.classList.remove('open');
   renderAll();
@@ -642,6 +884,8 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   await putEntryToDB(newEntry);
   syncDot.classList.remove('busy');
 });
+
+setFormType('book');
 
 // 최초 로드 + 다른 가족 구성원의 변경사항을 반영하기 위한 주기적 새로고침
 refreshFromDB(false);
