@@ -815,10 +815,7 @@ function renderBookResults(items){
   searchDD._items = items;
   searchDD.hidden = false;
 }
-searchDD.addEventListener('click', (ev)=>{
-  const btn = ev.target.closest('.book-result');
-  if(!btn) return;
-  const it = searchDD._items[parseInt(btn.dataset.i)];
+function selectBookResult(it){
   const info = it.volumeInfo || {};
   titleInput.value = info.title || '';
   document.getElementById('f-creator').value = (info.authors||[]).join(', ');
@@ -827,8 +824,29 @@ searchDD.addEventListener('click', (ev)=>{
   if(formThumbnail){
     thumbPreviewImg.src = formThumbnail;
     thumbPreview.hidden = false;
+  }else{
+    thumbPreview.hidden = true;
   }
   searchDD.hidden = true;
+}
+searchDD.addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.book-result');
+  if(!btn) return;
+  selectBookResult(searchDD._items[parseInt(btn.dataset.i)]);
+});
+
+// Enter 키: 검색 결과가 떠 있으면 첫 번째 항목 선택, 없으면 즉시 검색 실행
+titleInput.addEventListener('keydown', (ev)=>{
+  if(ev.key !== 'Enter') return;
+  ev.preventDefault();
+  if(formType !== 'book') return;
+  if(!searchDD.hidden && searchDD._items && searchDD._items.length){
+    selectBookResult(searchDD._items[0]);
+  }else{
+    clearTimeout(searchTimer);
+    const q = titleInput.value.trim();
+    if(q.length >= 2) searchBooks(q);
+  }
 });
 
 // form toggle
