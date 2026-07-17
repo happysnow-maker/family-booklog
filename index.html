@@ -368,7 +368,7 @@
             <input type="text" id="f-title" placeholder="제목을 입력하세요" autocomplete="off">
             <div class="search-dd" id="search-dd" hidden></div>
             <div class="thumb-preview" id="thumb-preview" hidden>
-              <img id="thumb-preview-img" src="" alt="">
+              <img id="thumb-preview-img" src="" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">
               <span>표지 이미지가 선택됐어요</span>
             </div>
           </div>
@@ -580,7 +580,7 @@ function renderLog(){
     const statusHtml = st === "done"
       ? `<span class="stamp">${labels.done.replace('!','')}</span>`
       : `<span class="status-reading">${labels.reading}</span>`;
-    const thumbHtml = e.thumbnail ? `<img class="entry-thumb" src="${e.thumbnail}" alt="">` : "";
+    const thumbHtml = e.thumbnail ? `<img class="entry-thumb" src="${e.thumbnail}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">` : "";
     const creatorHtml = e.creator ? `<div class="entry-creator">${esc(e.creator)}</div>` : "";
     return `
     <div class="entry" data-id="${e.id}">
@@ -808,7 +808,7 @@ function renderBookResults(items){
     const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
     const author = (info.authors||[]).join(', ');
     return `<button type="button" class="book-result" data-i="${i}">
-      ${thumb ? `<img src="${thumb.replace('http://','https://')}" alt="">` : `<span class="book-noimg"></span>`}
+      ${thumb ? `<img src="${thumb.replace('http://','https://')}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span class="book-noimg"></span>`}
       <span class="br-text"><b>${esc(info.title||'')}</b>${author?`<i>${esc(author)}</i>`:''}</span>
     </button>`;
   }).join('');
