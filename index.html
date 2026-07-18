@@ -162,7 +162,7 @@
   .range-row{display:flex;align-items:center;gap:6px;}
   .range-row span{color:var(--ink-soft);font-size:12px;}
 
-  /* book search dropdown */
+  /* search dropdown (책/영화/유튜브 공용) */
   .search-dd{
     position:absolute;top:100%;left:0;right:0;margin-top:4px;
     background:var(--card);border:1px solid var(--line);border-radius:12px;
@@ -192,6 +192,12 @@
   .status-btn.active{color:#fff;border-color:transparent;}
   .status-btn.active[data-s="reading"]{background:#B08CFF;}
   .status-btn.active[data-s="done"]{background:var(--stamp);}
+
+  .attach-input{font-size:12.5px;}
+  .attach-preview{display:flex;align-items:center;gap:10px;margin-top:8px;}
+  .attach-preview img{width:56px;height:56px;object-fit:cover;border-radius:8px;box-shadow:0 2px 6px rgba(0,0,0,0.15);}
+  .btn-remove-attach{background:none;border:1px solid var(--line);color:var(--ink-soft);
+    border-radius:999px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer;}
 
   .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
   .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink-soft);
@@ -232,10 +238,13 @@
   .status-reading{font-size:10.5px;font-weight:700;color:#8A6FD9;background:#F3EDFF;
     padding:4px 10px;border-radius:999px;white-space:nowrap;}
 
-  .entry-meta{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 9px;}
+  .entry-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 9px;}
   .meta-pill{font-size:11px;font-weight:700;color:var(--ink-soft);background:var(--bg);
     border-radius:999px;padding:4px 10px;}
+  .entry-link{font-size:11px;font-weight:700;color:var(--t-youtube);text-decoration:none;
+    background:#FDE9E7;border-radius:999px;padding:4px 10px;}
   .entry-content{font-size:13.5px;line-height:1.7;color:#4A4038;white-space:pre-wrap;}
+  .entry-attach{width:100%;max-height:240px;object-fit:cover;border-radius:12px;margin-top:10px;display:block;}
   .entry-del{position:absolute;top:14px;right:15px;background:none;border:none;cursor:pointer;
     font-size:10.5px;color:var(--ink-soft);font-weight:700;opacity:0;transition:opacity .15s ease;
     padding:4px 8px;border-radius:6px;}
@@ -369,7 +378,7 @@
             <div class="search-dd" id="search-dd" hidden></div>
             <div class="thumb-preview" id="thumb-preview" hidden>
               <img id="thumb-preview-img" src="" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">
-              <span>표지 이미지가 선택됐어요</span>
+              <span>이미지가 선택됐어요</span>
             </div>
           </div>
           <div class="field" id="field-creator">
@@ -402,6 +411,14 @@
           <div class="field full">
             <label>감상 / 메모</label>
             <textarea id="f-content" placeholder="자유롭게 적어보세요."></textarea>
+          </div>
+          <div class="field full">
+            <label>사진 첨부 (선택)</label>
+            <input type="file" id="f-attachment" class="attach-input" accept="image/*">
+            <div class="attach-preview" id="attach-preview" hidden>
+              <img id="attach-preview-img" src="" alt="">
+              <button type="button" class="btn-remove-attach" id="btn-remove-attach">제거</button>
+            </div>
           </div>
         </div>
         <div class="form-actions">
@@ -441,10 +458,12 @@
 
 <script>
 /* =========================================================
-   Google Apps Script 웹 앱 연결 설정
+   연결 설정
    ========================================================= */
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEs-P8oehus60yY3wB_AOhOWkCw3iRrMX8cxNyH894tyK-R4o4j-oXRf4x3hbjQxkRaA/exec";
-const GOOGLE_BOOKS_API_KEY = "AIzaSyDqFo1A6diJbic8yvlIEOepp2wtiPPkje8";
+const GOOGLE_API_KEY = "AIzaSyDqFo1A6diJbic8yvlIEOepp2wtiPPkje8"; // 책 검색 + 유튜브 검색 공용
+const TMDB_API_KEY = "dc550f83031e64c17ae997c05a223e0b"; // 영화 검색
+
 const IS_CONFIGURED = !APPS_SCRIPT_URL.includes("YOUR-DEPLOYMENT-ID");
 if(!IS_CONFIGURED){
   document.getElementById('setup-banner').classList.add('show');
@@ -460,16 +479,17 @@ const STATUS_LABEL = {
   youtube:{reading:"보는 중", done:"다봤어요!"},
   other:  {reading:"진행 중", done:"완료!"}
 };
-const CREATOR_LABEL = {book:"저자", movie:"감독", youtube:"채널명"};
 
 let entries = [];
-let activeFilter = "전체";   // 가족 구성원
-let activeType = "전체";      // 종류
+let activeFilter = "전체";
+let activeType = "전체";
 let mode = "log";
 let currentYear = new Date().getFullYear();
 let formStatus = "reading";
 let formType = "book";
 let formThumbnail = "";
+let formLink = "";
+let formAttachmentBase64 = "";
 
 const entriesEl = document.getElementById('entries');
 const statsLine = document.getElementById('stats-line');
@@ -480,9 +500,17 @@ const titleInput = document.getElementById('f-title');
 const searchDD = document.getElementById('search-dd');
 const thumbPreview = document.getElementById('thumb-preview');
 const thumbPreviewImg = document.getElementById('thumb-preview-img');
+const attachInput = document.getElementById('f-attachment');
+const attachPreview = document.getElementById('attach-preview');
+const attachPreviewImg = document.getElementById('attach-preview-img');
 
 function esc(s){
   return (s||"").replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+}
+function decodeEntities(s){
+  const t = document.createElement('textarea');
+  t.innerHTML = s || '';
+  return t.value;
 }
 function fmtDate(d){
   if(!d) return "";
@@ -513,12 +541,34 @@ function entryType(e){
   return e.type || "book";
 }
 
-/* ===== Google Apps Script(Sheets) REST 통신 ===== */
+/* ===== Google Apps Script(Sheets) 통신 =====
+   조회는 JSONP, 쓰기는 no-cors fetch로 CORS 우회 */
+function jsonp(url){
+  return new Promise((resolve, reject)=>{
+    const cbName = 'jsonp_cb_' + Date.now() + '_' + Math.floor(Math.random()*100000);
+    const script = document.createElement('script');
+    let done = false;
+    window[cbName] = (data)=>{
+      done = true;
+      resolve(data);
+      cleanup();
+    };
+    function cleanup(){
+      delete window[cbName];
+      script.remove();
+    }
+    script.onerror = ()=>{
+      if(!done){ reject(new Error('JSONP 로드 실패')); cleanup(); }
+    };
+    script.src = `${url}${url.includes('?') ? '&' : '?'}callback=${cbName}`;
+    document.body.appendChild(script);
+    setTimeout(()=>{ if(!done){ reject(new Error('JSONP 시간초과')); cleanup(); } }, 15000);
+  });
+}
 async function fetchEntriesFromDB(){
   if(!IS_CONFIGURED) return [];
   try{
-    const res = await fetch(`${APPS_SCRIPT_URL}?action=list`);
-    const data = await res.json();
+    const data = await jsonp(`${APPS_SCRIPT_URL}?action=list`);
     return (data.entries || []).map(e => ({...e, id:String(e.id)}));
   }catch(e){
     console.error('불러오기 실패', e);
@@ -530,6 +580,7 @@ async function putEntryToDB(entry){
   try{
     await fetch(APPS_SCRIPT_URL, {
       method:'POST',
+      mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({action:'add', entry})
     });
@@ -540,12 +591,12 @@ async function deleteEntryFromDB(id){
   try{
     await fetch(APPS_SCRIPT_URL, {
       method:'POST',
+      mode:'no-cors',
       headers:{'Content-Type':'text/plain;charset=utf-8'},
       body: JSON.stringify({action:'delete', id})
     });
   }catch(e){ console.error('삭제 실패', e); }
 }
-
 async function refreshFromDB(silent){
   if(!silent) syncDot.classList.add('busy');
   entries = await fetchEntriesFromDB();
@@ -582,6 +633,8 @@ function renderLog(){
       : `<span class="status-reading">${labels.reading}</span>`;
     const thumbHtml = e.thumbnail ? `<img class="entry-thumb" src="${e.thumbnail}" alt="" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none'">` : "";
     const creatorHtml = e.creator ? `<div class="entry-creator">${esc(e.creator)}</div>` : "";
+    const linkHtml = e.link ? `<a class="entry-link" href="${esc(e.link)}" target="_blank" rel="noopener">▶ 영상 보기</a>` : "";
+    const attachHtml = e.attachment ? `<img class="entry-attach" src="${e.attachment}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
     return `
     <div class="entry" data-id="${e.id}">
       <button class="entry-del" data-id="${e.id}">삭제</button>
@@ -599,8 +652,9 @@ function renderLog(){
               <span class="badge" data-m="${e.member}">${e.member}</span>
             </div>
           </div>
-          <div class="entry-meta">${meta}</div>
+          <div class="entry-meta">${meta}${linkHtml}</div>
           ${content ? `<div class="entry-content">${content}</div>` : ""}
+          ${attachHtml}
         </div>
       </div>
     </div>`;
@@ -720,7 +774,7 @@ document.getElementById('type-chips').addEventListener('click', (ev)=>{
 document.getElementById('y-prev').addEventListener('click', ()=>{ currentYear--; renderWrap(); });
 document.getElementById('y-next').addEventListener('click', ()=>{ currentYear++; renderWrap(); });
 
-// status toggle in form
+// status toggle
 function setFormStatus(s){
   formStatus = s;
   document.getElementById('btn-status-reading').classList.toggle('active', s === 'reading');
@@ -734,7 +788,8 @@ function refreshStatusLabels(){
   document.getElementById('btn-status-done').textContent = l.done;
 }
 
-// type toggle in form — switches visible fields
+// type toggle — switches visible fields + labels
+const SEARCHABLE_TYPES = ['book','movie','youtube'];
 function setFormType(t){
   formType = t;
   document.querySelectorAll('.type-btn').forEach(b=> b.classList.toggle('active', b.dataset.t === t));
@@ -742,6 +797,7 @@ function setFormType(t){
   searchDD.hidden = true;
   thumbPreview.hidden = true;
   formThumbnail = "";
+  formLink = "";
 
   const labTitle = document.getElementById('lab-title');
   const fieldCreator = document.getElementById('field-creator');
@@ -755,12 +811,12 @@ function setFormType(t){
     fieldPages.hidden = false;
     labDate.textContent = '읽은 기간';
   }else if(t === 'movie'){
-    labTitle.textContent = '영화 제목';
-    fieldCreator.hidden = false; labCreator.textContent = '감독';
+    labTitle.textContent = '영화 제목 (검색해서 선택)';
+    fieldCreator.hidden = false; labCreator.textContent = '개봉년도';
     fieldPages.hidden = true;
     labDate.textContent = '본 날짜';
   }else if(t === 'youtube'){
-    labTitle.textContent = '영상 제목';
+    labTitle.textContent = '영상 제목 (검색해서 선택)';
     fieldCreator.hidden = false; labCreator.textContent = '채널명';
     fieldPages.hidden = true;
     labDate.textContent = '본 날짜';
@@ -777,16 +833,22 @@ document.getElementById('type-toggle').addEventListener('click', (ev)=>{
   setFormType(t.dataset.t);
 });
 
-// ===== 구글 도서 검색 (책 타입일 때만) =====
+// ===== 통합 검색 (책/영화/유튜브) =====
 let searchTimer;
+function runSearch(q){
+  if(formType === 'book') searchBooks(q);
+  else if(formType === 'movie') searchMovies(q);
+  else if(formType === 'youtube') searchYoutube(q);
+}
 titleInput.addEventListener('input', ()=>{
   formThumbnail = "";
+  formLink = "";
   thumbPreview.hidden = true;
-  if(formType !== 'book'){ searchDD.hidden = true; return; }
+  if(!SEARCHABLE_TYPES.includes(formType)){ searchDD.hidden = true; return; }
   clearTimeout(searchTimer);
   const q = titleInput.value.trim();
   if(q.length < 2){ searchDD.hidden = true; return; }
-  searchTimer = setTimeout(()=> searchBooks(q), 350);
+  searchTimer = setTimeout(()=> runSearch(q), 350);
 });
 document.addEventListener('click', (ev)=>{
   if(!searchDD.contains(ev.target) && ev.target !== titleInput){ searchDD.hidden = true; }
@@ -794,33 +856,74 @@ document.addEventListener('click', (ev)=>{
 
 async function searchBooks(q){
   try{
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5&key=${GOOGLE_BOOKS_API_KEY}`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5&key=${GOOGLE_API_KEY}`);
     const data = await res.json();
-    renderBookResults(data.items || []);
-  }catch(e){
-    console.error('책 검색 실패', e);
-  }
+    const items = (data.items || []).map(it=>{
+      const info = it.volumeInfo || {};
+      const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
+      return {
+        title: info.title || '',
+        subtitle: (info.authors||[]).join(', '),
+        creator: (info.authors||[]).join(', '),
+        thumb, link: ''
+      };
+    });
+    renderSearchResults(items);
+  }catch(e){ console.error('책 검색 실패', e); }
 }
-function renderBookResults(items){
+
+async function searchMovies(q){
+  try{
+    const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&language=ko-KR&query=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const items = (data.results || []).slice(0,5).map(m=>{
+      const year = m.release_date ? m.release_date.slice(0,4) : '';
+      return {
+        title: m.title || '',
+        subtitle: year,
+        creator: year,
+        thumb: m.poster_path ? `https://image.tmdb.org/t/p/w200${m.poster_path}` : '',
+        link: ''
+      };
+    });
+    renderSearchResults(items);
+  }catch(e){ console.error('영화 검색 실패', e); }
+}
+
+async function searchYoutube(q){
+  try{
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}`);
+    const data = await res.json();
+    const items = (data.items || []).map(v=>{
+      const title = decodeEntities(v.snippet.title || '');
+      const channel = decodeEntities(v.snippet.channelTitle || '');
+      const thumb = (v.snippet.thumbnails && v.snippet.thumbnails.default && v.snippet.thumbnails.default.url) || '';
+      return {
+        title, subtitle: channel, creator: channel, thumb,
+        link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+      };
+    });
+    renderSearchResults(items);
+  }catch(e){ console.error('유튜브 검색 실패', e); }
+}
+
+function renderSearchResults(items){
   if(!items.length){ searchDD.hidden = true; searchDD.innerHTML=''; return; }
   searchDD.innerHTML = items.map((it,i)=>{
-    const info = it.volumeInfo || {};
-    const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
-    const author = (info.authors||[]).join(', ');
+    const thumb = it.thumb ? it.thumb.replace('http://','https://') : '';
     return `<button type="button" class="book-result" data-i="${i}">
-      ${thumb ? `<img src="${thumb.replace('http://','https://')}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span class="book-noimg"></span>`}
-      <span class="br-text"><b>${esc(info.title||'')}</b>${author?`<i>${esc(author)}</i>`:''}</span>
+      ${thumb ? `<img src="${thumb}" alt="" referrerpolicy="no-referrer" loading="lazy">` : `<span class="book-noimg"></span>`}
+      <span class="br-text"><b>${esc(it.title)}</b>${it.subtitle?`<i>${esc(it.subtitle)}</i>`:''}</span>
     </button>`;
   }).join('');
   searchDD._items = items;
   searchDD.hidden = false;
 }
-function selectBookResult(it){
-  const info = it.volumeInfo || {};
-  titleInput.value = info.title || '';
-  document.getElementById('f-creator').value = (info.authors||[]).join(', ');
-  const thumb = (info.imageLinks && (info.imageLinks.thumbnail || info.imageLinks.smallThumbnail)) || '';
-  formThumbnail = thumb.replace('http://','https://');
+function selectSearchResult(it){
+  titleInput.value = it.title || '';
+  document.getElementById('f-creator').value = it.creator || '';
+  formLink = it.link || '';
+  formThumbnail = it.thumb ? it.thumb.replace('http://','https://') : '';
   if(formThumbnail){
     thumbPreviewImg.src = formThumbnail;
     thumbPreview.hidden = false;
@@ -832,21 +935,59 @@ function selectBookResult(it){
 searchDD.addEventListener('click', (ev)=>{
   const btn = ev.target.closest('.book-result');
   if(!btn) return;
-  selectBookResult(searchDD._items[parseInt(btn.dataset.i)]);
+  selectSearchResult(searchDD._items[parseInt(btn.dataset.i)]);
 });
-
-// Enter 키: 검색 결과가 떠 있으면 첫 번째 항목 선택, 없으면 즉시 검색 실행
 titleInput.addEventListener('keydown', (ev)=>{
   if(ev.key !== 'Enter') return;
   ev.preventDefault();
-  if(formType !== 'book') return;
+  if(!SEARCHABLE_TYPES.includes(formType)) return;
   if(!searchDD.hidden && searchDD._items && searchDD._items.length){
-    selectBookResult(searchDD._items[0]);
+    selectSearchResult(searchDD._items[0]);
   }else{
     clearTimeout(searchTimer);
     const q = titleInput.value.trim();
-    if(q.length >= 2) searchBooks(q);
+    if(q.length >= 2) runSearch(q);
   }
+});
+
+// ===== 사진 첨부 (선택, 클라이언트에서 리사이즈 후 base64로 전송) =====
+function compressImage(file, maxDim, quality){
+  maxDim = maxDim || 1000; quality = quality || 0.72;
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = (e)=>{
+      const img = new Image();
+      img.onload = ()=>{
+        let w = img.width, h = img.height;
+        if(w > maxDim || h > maxDim){
+          if(w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+          else{ w = Math.round(w * maxDim / h); h = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality).split(',')[1]);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+attachInput.addEventListener('change', async ()=>{
+  const file = attachInput.files[0];
+  if(!file) return;
+  try{
+    formAttachmentBase64 = await compressImage(file);
+    attachPreviewImg.src = 'data:image/jpeg;base64,' + formAttachmentBase64;
+    attachPreview.hidden = false;
+  }catch(err){ console.error('이미지 처리 실패', err); }
+});
+document.getElementById('btn-remove-attach').addEventListener('click', ()=>{
+  formAttachmentBase64 = "";
+  attachInput.value = "";
+  attachPreview.hidden = true;
 });
 
 // form toggle
@@ -878,11 +1019,17 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
 
   const newEntry = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
-    member, type: formType, title, creator, thumbnail: formThumbnail,
+    member, type: formType, title, creator, thumbnail: formThumbnail, link: formLink,
     startDate, endDate, startPage, endPage, content,
     status: formStatus,
     createdAt: Date.now()
   };
+
+  if(formAttachmentBase64){
+    newEntry.attachmentData = formAttachmentBase64;
+    newEntry.attachmentType = 'image/jpeg';
+    newEntry.attachment = 'data:image/jpeg;base64,' + formAttachmentBase64; // 로컬 즉시표시용
+  }
 
   entries.push(newEntry);
   titleInput.value = "";
@@ -892,7 +1039,11 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
   document.getElementById('f-start-page').value = "";
   document.getElementById('f-end-page').value = "";
   document.getElementById('f-content').value = "";
+  attachInput.value = "";
+  attachPreview.hidden = true;
+  formAttachmentBase64 = "";
   formThumbnail = "";
+  formLink = "";
   thumbPreview.hidden = true;
   setFormStatus('reading');
   formCard.classList.remove('open');
@@ -904,8 +1055,6 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
 });
 
 setFormType('book');
-
-// 최초 로드 + 다른 가족 구성원의 변경사항을 반영하기 위한 주기적 새로고침
 refreshFromDB(false);
 setInterval(()=> refreshFromDB(true), 12000);
 </script>
