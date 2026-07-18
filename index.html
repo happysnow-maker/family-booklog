@@ -183,6 +183,23 @@
   .thumb-preview{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11.5px;color:var(--ink-soft);}
   .thumb-preview img{width:24px;height:34px;object-fit:cover;border-radius:4px;}
 
+  .yt-mode-toggle{display:flex;gap:6px;margin-top:6px;}
+  .yt-mode-btn{
+    border:1px solid var(--line);background:var(--card);cursor:pointer;
+    font-family:'Pretendard',sans-serif;font-weight:700;font-size:11px;
+    padding:5px 10px;border-radius:999px;color:var(--ink-soft);
+  }
+  .yt-mode-btn.active{background:var(--t-youtube);color:#fff;border-color:transparent;}
+  .yt-channel-info{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    margin-top:6px;font-size:11.5px;color:var(--t-youtube);font-weight:700;
+    background:#FDE9E7;border-radius:8px;padding:6px 10px;
+  }
+  .yt-channel-info button{
+    background:none;border:none;color:var(--ink-soft);font-size:11px;font-weight:700;
+    cursor:pointer;text-decoration:underline;padding:0;
+  }
+
   .status-toggle{display:flex;gap:8px;}
   .status-btn{
     flex:1;border:1.5px solid var(--line);background:var(--card);
@@ -380,6 +397,11 @@
               <img id="thumb-preview-img" src="" alt="" referrerpolicy="no-referrer" onerror="this.style.display='none'">
               <span>이미지가 선택됐어요</span>
             </div>
+            <div class="yt-mode-toggle" id="yt-mode-toggle" hidden>
+              <button type="button" class="yt-mode-btn active" data-mode="video">영상 검색</button>
+              <button type="button" class="yt-mode-btn" data-mode="channel">채널로 찾기</button>
+            </div>
+            <div class="yt-channel-info" id="yt-channel-info" hidden></div>
           </div>
           <div class="field" id="field-creator">
             <label id="lab-creator">저자</label>
@@ -490,6 +512,8 @@ let formType = "book";
 let formThumbnail = "";
 let formLink = "";
 let formAttachmentBase64 = "";
+let ytMode = "video";           // 'video' | 'channel'
+let ytSelectedChannel = null;   // {id, title}
 
 const entriesEl = document.getElementById('entries');
 const statsLine = document.getElementById('stats-line');
@@ -798,6 +822,11 @@ function setFormType(t){
   thumbPreview.hidden = true;
   formThumbnail = "";
   formLink = "";
+  ytMode = "video";
+  ytSelectedChannel = null;
+  document.getElementById('yt-mode-toggle').hidden = (t !== 'youtube');
+  document.getElementById('yt-channel-info').hidden = true;
+  document.querySelectorAll('.yt-mode-btn').forEach(b=> b.classList.toggle('active', b.dataset.mode === 'video'));
 
   const labTitle = document.getElementById('lab-title');
   const fieldCreator = document.getElementById('field-creator');
@@ -833,12 +862,28 @@ document.getElementById('type-toggle').addEventListener('click', (ev)=>{
   setFormType(t.dataset.t);
 });
 
+document.getElementById('yt-mode-toggle').addEventListener('click', (ev)=>{
+  const btn = ev.target.closest('.yt-mode-btn');
+  if(!btn) return;
+  ytMode = btn.dataset.mode;
+  ytSelectedChannel = null;
+  document.querySelectorAll('.yt-mode-btn').forEach(b=> b.classList.toggle('active', b===btn));
+  document.getElementById('yt-channel-info').hidden = true;
+  titleInput.value = '';
+  titleInput.placeholder = ytMode === 'channel' ? '채널 이름을 입력하세요' : '제목을 입력하세요';
+  searchDD.hidden = true;
+});
+
 // ===== 통합 검색 (책/영화/유튜브) =====
 let searchTimer;
 function runSearch(q){
   if(formType === 'book') searchBooks(q);
   else if(formType === 'movie') searchMovies(q);
-  else if(formType === 'youtube') searchYoutube(q);
+  else if(formType === 'youtube'){
+    if(ytSelectedChannel) searchChannelVideos(ytSelectedChannel.id, q);
+    else if(ytMode === 'channel') searchYoutubeChannels(q);
+    else searchYoutube(q);
+  }
 }
 titleInput.addEventListener('input', ()=>{
   formThumbnail = "";
@@ -907,6 +952,41 @@ async function searchYoutube(q){
   }catch(e){ console.error('유튜브 검색 실패', e); }
 }
 
+async function searchYoutubeChannels(q){
+  try{
+    const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&maxResults=5&q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}`);
+    const data = await res.json();
+    const items = (data.items || []).map(c=>{
+      const title = decodeEntities(c.snippet.title || '');
+      const thumb = (c.snippet.thumbnails && c.snippet.thumbnails.default && c.snippet.thumbnails.default.url) || '';
+      return {
+        title, subtitle: '채널', thumb,
+        _isChannel: true, _channelId: c.snippet.channelId
+      };
+    });
+    renderSearchResults(items);
+  }catch(e){ console.error('채널 검색 실패', e); }
+}
+
+async function searchChannelVideos(channelId, q){
+  try{
+    let url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=8&channelId=${channelId}&key=${GOOGLE_API_KEY}`;
+    url += q ? `&q=${encodeURIComponent(q)}` : `&order=date`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const items = (data.items || []).map(v=>{
+      const title = decodeEntities(v.snippet.title || '');
+      const thumb = (v.snippet.thumbnails && v.snippet.thumbnails.default && v.snippet.thumbnails.default.url) || '';
+      return {
+        title, subtitle: ytSelectedChannel ? ytSelectedChannel.title : '',
+        creator: ytSelectedChannel ? ytSelectedChannel.title : '',
+        thumb, link: `https://www.youtube.com/watch?v=${v.id.videoId}`
+      };
+    });
+    renderSearchResults(items);
+  }catch(e){ console.error('채널 영상 검색 실패', e); }
+}
+
 function renderSearchResults(items){
   if(!items.length){ searchDD.hidden = true; searchDD.innerHTML=''; return; }
   searchDD.innerHTML = items.map((it,i)=>{
@@ -920,6 +1000,21 @@ function renderSearchResults(items){
   searchDD.hidden = false;
 }
 function selectSearchResult(it){
+  if(it._isChannel){
+    ytSelectedChannel = { id: it._channelId, title: it.title };
+    const infoEl = document.getElementById('yt-channel-info');
+    infoEl.innerHTML = `<span>📺 ${esc(it.title)} 채널 영상 중에서 선택하세요</span><button type="button" id="btn-reset-channel">채널 다시 선택</button>`;
+    infoEl.hidden = false;
+    document.getElementById('btn-reset-channel').addEventListener('click', ()=>{
+      ytSelectedChannel = null;
+      infoEl.hidden = true;
+      titleInput.value = '';
+      searchDD.hidden = true;
+    });
+    titleInput.value = '';
+    searchChannelVideos(it._channelId, '');
+    return;
+  }
   titleInput.value = it.title || '';
   document.getElementById('f-creator').value = it.creator || '';
   formLink = it.link || '';
