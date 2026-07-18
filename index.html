@@ -262,11 +262,19 @@
     background:#FDE9E7;border-radius:999px;padding:4px 10px;}
   .entry-content{font-size:13.5px;line-height:1.7;color:#4A4038;white-space:pre-wrap;}
   .entry-attach{width:100%;max-height:240px;object-fit:cover;border-radius:12px;margin-top:10px;display:block;}
-  .entry-del{position:absolute;top:14px;right:15px;background:none;border:none;cursor:pointer;
-    font-size:10.5px;color:var(--ink-soft);font-weight:700;opacity:0;transition:opacity .15s ease;
+  .entry-toggle{
+    all:unset;display:inline-block;margin-top:8px;cursor:pointer;
+    font-size:11.5px;font-weight:700;color:var(--ink-soft);
+    border-bottom:1px dashed var(--ink-soft);
+  }
+  .entry-toggle:hover{color:var(--ink);}
+  .entry-actions{position:absolute;top:14px;right:15px;display:flex;gap:6px;opacity:0.5;transition:opacity .15s ease;}
+  .entry:hover .entry-actions{opacity:1;}
+  .entry-edit,.entry-del{background:none;border:none;cursor:pointer;
+    font-size:10.5px;color:var(--ink-soft);font-weight:700;
     padding:4px 8px;border-radius:6px;}
-  .entry:hover .entry-del{opacity:1;}
-  .entry-del.confirm{color:#E23F6B;opacity:1;background:#FDE7ED;}
+  .entry-edit:hover{background:var(--bg);color:var(--ink);}
+  .entry-del.confirm{color:#E23F6B;background:#FDE7ED;}
 
   .empty{text-align:center;color:var(--ink-soft);font-size:13px;padding:44px 20px;
     border:1.5px dashed var(--line);border-radius:16px;}
@@ -370,7 +378,7 @@
       </div>
 
       <div class="form-card" id="form-card">
-        <p class="form-title">새로운 기록 남기기</p>
+        <p class="form-title" id="form-title-text">새로운 기록 남기기</p>
 
         <div class="type-toggle" id="type-toggle">
           <button type="button" class="type-btn active" data-t="book">📕 책</button>
@@ -507,6 +515,7 @@ let activeFilter = "전체";
 let activeType = "전체";
 let mode = "log";
 let currentYear = new Date().getFullYear();
+let expandedIds = new Set();
 let formStatus = "reading";
 let formType = "book";
 let formThumbnail = "";
@@ -514,6 +523,8 @@ let formLink = "";
 let formAttachmentBase64 = "";
 let ytMode = "video";           // 'video' | 'channel'
 let ytSelectedChannel = null;   // {id, title}
+let editingId = null;
+let formExistingAttachment = "";
 
 const entriesEl = document.getElementById('entries');
 const statsLine = document.getElementById('stats-line');
@@ -610,6 +621,17 @@ async function putEntryToDB(entry){
     });
   }catch(e){ console.error('저장 실패', e); }
 }
+async function updateEntryInDB(entry){
+  if(!IS_CONFIGURED) return;
+  try{
+    await fetch(APPS_SCRIPT_URL, {
+      method:'POST',
+      mode:'no-cors',
+      headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify({action:'update', entry})
+    });
+  }catch(e){ console.error('수정 실패', e); }
+}
 async function deleteEntryFromDB(id){
   if(!IS_CONFIGURED) return;
   try{
@@ -659,9 +681,15 @@ function renderLog(){
     const creatorHtml = e.creator ? `<div class="entry-creator">${esc(e.creator)}</div>` : "";
     const linkHtml = e.link ? `<a class="entry-link" href="${esc(e.link)}" target="_blank" rel="noopener">▶ 영상 보기</a>` : "";
     const attachHtml = e.attachment ? `<img class="entry-attach" src="${e.attachment}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+    const hasMore = !!(e.content || e.attachment);
+    const isOpen = expandedIds.has(String(e.id));
+    const toggleHtml = hasMore ? `<button type="button" class="entry-toggle" data-id="${e.id}">${isOpen ? '접기 ▴' : '더보기 ▾'}</button>` : "";
     return `
-    <div class="entry" data-id="${e.id}">
-      <button class="entry-del" data-id="${e.id}">삭제</button>
+    <div class="entry${hasMore ? ' has-more' : ''}${isOpen ? ' open' : ''}" data-id="${e.id}">
+      <div class="entry-actions">
+        <button class="entry-edit" data-id="${e.id}">수정</button>
+        <button class="entry-del" data-id="${e.id}">삭제</button>
+      </div>
       <div class="entry-row">
         ${thumbHtml}
         <div class="entry-body">
@@ -677,14 +705,26 @@ function renderLog(){
             </div>
           </div>
           <div class="entry-meta">${meta}${linkHtml}</div>
-          ${content ? `<div class="entry-content">${content}</div>` : ""}
-          ${attachHtml}
+          ${isOpen ? `
+            ${content ? `<div class="entry-content">${content}</div>` : ""}
+            ${attachHtml}
+          ` : ""}
+          ${toggleHtml}
         </div>
       </div>
     </div>`;
   }).join("");
 
   document.querySelectorAll('.entry-del').forEach(btn=>btn.addEventListener('click', onDeleteClick));
+  document.querySelectorAll('.entry-edit').forEach(btn=>btn.addEventListener('click', (ev)=>{
+    editEntry(btn.dataset.id);
+  }));
+  document.querySelectorAll('.entry-toggle').forEach(btn=>btn.addEventListener('click', (ev)=>{
+    ev.stopPropagation();
+    const id = String(btn.dataset.id);
+    if(expandedIds.has(id)) expandedIds.delete(id); else expandedIds.add(id);
+    renderLog();
+  }));
 }
 
 async function onDeleteClick(ev){
@@ -956,12 +996,14 @@ async function searchYoutubeChannels(q){
   try{
     const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&maxResults=5&q=${encodeURIComponent(q)}&key=${GOOGLE_API_KEY}`);
     const data = await res.json();
+    if(data.error){ console.error('채널 검색 API 오류', data.error); renderSearchResults([]); return; }
     const items = (data.items || []).map(c=>{
       const title = decodeEntities(c.snippet.title || '');
       const thumb = (c.snippet.thumbnails && c.snippet.thumbnails.default && c.snippet.thumbnails.default.url) || '';
+      const channelId = (c.id && c.id.channelId) || c.snippet.channelId || '';
       return {
         title, subtitle: '채널', thumb,
-        _isChannel: true, _channelId: c.snippet.channelId
+        _isChannel: true, _channelId: channelId
       };
     });
     renderSearchResults(items);
@@ -1088,12 +1130,77 @@ document.getElementById('btn-remove-attach').addEventListener('click', ()=>{
 // form toggle
 const btnToggle = document.getElementById('btn-toggle-form');
 btnToggle.addEventListener('click', ()=>{
+  if(formCard.classList.contains('open') && editingId){
+    resetFormAfterSave();
+    return;
+  }
   formCard.classList.toggle('open');
   if(formCard.classList.contains('open') && activeFilter !== "전체"){
     document.getElementById('f-member').value = activeFilter;
   }
 });
-document.getElementById('btn-cancel').addEventListener('click', ()=> formCard.classList.remove('open'));
+document.getElementById('btn-cancel').addEventListener('click', ()=> resetFormAfterSave());
+
+function resetFormAfterSave(){
+  titleInput.value = "";
+  document.getElementById('f-creator').value = "";
+  document.getElementById('f-start-date').value = "";
+  document.getElementById('f-end-date').value = "";
+  document.getElementById('f-start-page').value = "";
+  document.getElementById('f-end-page').value = "";
+  document.getElementById('f-content').value = "";
+  attachInput.value = "";
+  attachPreview.hidden = true;
+  formAttachmentBase64 = "";
+  formExistingAttachment = "";
+  formThumbnail = "";
+  formLink = "";
+  thumbPreview.hidden = true;
+  setFormStatus('reading');
+  setFormType('book');
+  editingId = null;
+  document.getElementById('form-title-text').textContent = '새로운 기록 남기기';
+  document.getElementById('btn-save').textContent = '기록 저장';
+  formCard.classList.remove('open');
+}
+
+function editEntry(id){
+  const e = entries.find(x=> String(x.id) === String(id));
+  if(!e) return;
+  editingId = String(id);
+
+  document.getElementById('form-title-text').textContent = '기록 수정하기';
+  document.getElementById('btn-save').textContent = '수정 저장';
+  formCard.classList.add('open');
+
+  setFormType(entryType(e));
+  document.getElementById('f-member').value = e.member;
+  titleInput.value = e.title || '';
+  document.getElementById('f-creator').value = e.creator || '';
+  document.getElementById('f-start-date').value = e.startDate || '';
+  document.getElementById('f-end-date').value = e.endDate || '';
+  document.getElementById('f-start-page').value = e.startPage || '';
+  document.getElementById('f-end-page').value = e.endPage || '';
+  document.getElementById('f-content').value = e.content || '';
+  setFormStatus(entryStatus(e));
+
+  formThumbnail = e.thumbnail || '';
+  formLink = e.link || '';
+  if(formThumbnail){
+    thumbPreviewImg.src = formThumbnail;
+    thumbPreview.hidden = false;
+  }
+
+  formExistingAttachment = e.attachment || '';
+  formAttachmentBase64 = '';
+  attachInput.value = '';
+  if(formExistingAttachment){
+    attachPreviewImg.src = formExistingAttachment;
+    attachPreview.hidden = false;
+  }
+
+  formCard.scrollIntoView({behavior:'smooth', block:'start'});
+}
 
 document.getElementById('btn-save').addEventListener('click', async ()=>{
   const member = document.getElementById('f-member').value;
@@ -1112,40 +1219,37 @@ document.getElementById('btn-save').addEventListener('click', async ()=>{
     return;
   }
 
+  const isEdit = !!editingId;
+  const original = isEdit ? entries.find(x=> String(x.id) === String(editingId)) : null;
+
   const newEntry = {
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+    id: isEdit ? editingId : (Date.now().toString(36) + Math.random().toString(36).slice(2, 8)),
     member, type: formType, title, creator, thumbnail: formThumbnail, link: formLink,
     startDate, endDate, startPage, endPage, content,
     status: formStatus,
-    createdAt: Date.now()
+    createdAt: isEdit && original ? original.createdAt : Date.now()
   };
 
   if(formAttachmentBase64){
     newEntry.attachmentData = formAttachmentBase64;
     newEntry.attachmentType = 'image/jpeg';
     newEntry.attachment = 'data:image/jpeg;base64,' + formAttachmentBase64; // 로컬 즉시표시용
+  }else if(formExistingAttachment){
+    newEntry.attachment = formExistingAttachment;
   }
 
-  entries.push(newEntry);
-  titleInput.value = "";
-  document.getElementById('f-creator').value = "";
-  document.getElementById('f-start-date').value = "";
-  document.getElementById('f-end-date').value = "";
-  document.getElementById('f-start-page').value = "";
-  document.getElementById('f-end-page').value = "";
-  document.getElementById('f-content').value = "";
-  attachInput.value = "";
-  attachPreview.hidden = true;
-  formAttachmentBase64 = "";
-  formThumbnail = "";
-  formLink = "";
-  thumbPreview.hidden = true;
-  setFormStatus('reading');
-  formCard.classList.remove('open');
+  if(isEdit){
+    const idx = entries.findIndex(x=> String(x.id) === String(editingId));
+    if(idx > -1) entries[idx] = newEntry; else entries.push(newEntry);
+  }else{
+    entries.push(newEntry);
+  }
+
+  resetFormAfterSave();
   renderAll();
 
   syncDot.classList.add('busy');
-  await putEntryToDB(newEntry);
+  if(isEdit) await updateEntryInDB(newEntry); else await putEntryToDB(newEntry);
   syncDot.classList.remove('busy');
 });
 
