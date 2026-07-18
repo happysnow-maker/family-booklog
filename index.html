@@ -794,7 +794,7 @@ document.addEventListener('click', (ev)=>{
 
 async function searchBooks(q){
   try{
-    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5`);
+    const res = await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=5&key=${GOOGLE_BOOKS_API_KEY}`);
     const data = await res.json();
     renderBookResults(data.items || []);
   }catch(e){
