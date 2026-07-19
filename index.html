@@ -540,7 +540,7 @@ const attachPreview = document.getElementById('attach-preview');
 const attachPreviewImg = document.getElementById('attach-preview-img');
 
 function esc(s){
-  return (s||"").replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+  return String(s==null ? "" : s).replace(/[<>&]/g, c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
 }
 function decodeEntities(s){
   const t = document.createElement('textarea');
@@ -669,6 +669,7 @@ function renderLog(){
   }
 
   entriesEl.innerHTML = sorted.map(e=>{
+   try{
     const type = entryType(e);
     const meta = fmtRange(e).map(p=>`<span class="meta-pill">${esc(p)}</span>`).join("");
     const content = esc(e.content);
@@ -713,6 +714,10 @@ function renderLog(){
         </div>
       </div>
     </div>`;
+   }catch(err){
+     console.error('기록 렌더링 실패, 건너뜁니다', e, err);
+     return '';
+   }
   }).join("");
 
   document.querySelectorAll('.entry-del').forEach(btn=>btn.addEventListener('click', onDeleteClick));
